@@ -12,6 +12,7 @@ import {
   LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 const items: { key: string; label: string; icon: typeof LayoutDashboard; badge?: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, badge: "Admin" },
@@ -24,11 +25,17 @@ function SidebarContent() {
   const [collapsed, setCollapsed] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "Admin";
   
   const active = searchParams.get("view") === "leads" ? "leads" : "dashboard";
 
   const onNavigate = (key: string) => {
-    router.push(`/?view=${key}`);
+    if (key === "leads" && !isAdmin) {
+      router.push(`/agent-leads`);
+    } else {
+      router.push(`/?view=${key}`);
+    }
   };
 
   return (
@@ -46,10 +53,10 @@ function SidebarContent() {
         {!collapsed && (
           <div>
             <p className="font-display font-bold text-sm text-white tracking-tight leading-none">
-              Residence
+              MSM Technologies
             </p>
             <p className="text-[11px] text-violet-300/80 mt-1">
-              Property CRM
+              CRM Portal
             </p>
           </div>
         )}
@@ -62,13 +69,18 @@ function SidebarContent() {
           </p>
         )}
         {items.map((item) => {
+          // Hide admin links from agents
+          if (!isAdmin && (item.key === "dashboard" || item.key === "settings" || item.key === "activity")) {
+            return null;
+          }
+
           const Icon = item.icon;
-          const isActive = item.key === active;
-          const clickable = item.key === "dashboard" || item.key === "leads";
+          const isActive = !isAdmin && item.key === "leads" ? true : item.key === active;
+          const clickable = item.key === "dashboard" || item.key === "leads" || item.key === "activity";
           return (
             <button
               key={item.key}
-              onClick={() => clickable && onNavigate(item.key as "dashboard" | "leads")}
+              onClick={() => clickable && onNavigate(item.key)}
               className={cn(
                 "group w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                 isActive

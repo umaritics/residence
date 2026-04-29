@@ -51,7 +51,7 @@ function StatCard({ label, value, delta, trend, icon: Icon, accent }: StatCardPr
 
       {/* Sparkline */}
       <div className="absolute bottom-0 left-0 right-0 h-12 opacity-80 pointer-events-none">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
           <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id={`spark-${label}`} x1="0" y1="0" x2="0" y2="1">
@@ -67,19 +67,51 @@ function StatCard({ label, value, delta, trend, icon: Icon, accent }: StatCardPr
   );
 }
 
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export function StatsRow() {
+  const { data: leads } = useSWR<any[]>("/api/leads", fetcher, { refreshInterval: 5000 });
+  
+  // FIX: Fetch the actual agents from the database to get an accurate count
+  const { data: agents } = useSWR<any[]>("/api/users", fetcher);
+  
+  const leadsData = Array.isArray(leads) ? leads : [];
+  const totalLeads = leadsData.length;
+  const pipelineValue = leadsData.reduce((acc, l) => acc + (l.budget || 0), 0);
+  
+  const activeAgentsCount = Array.isArray(agents) ? agents.length.toString() : "0";
+
+  // Format pipeline value roughly
+  let formattedPipeline = "PKR 0";
+  if (pipelineValue >= 10_000_000) {
+    formattedPipeline = `PKR ${(pipelineValue / 10_000_000).toFixed(2)} Cr`;
+  } else if (pipelineValue >= 1_000_000) {
+    formattedPipeline = `PKR ${(pipelineValue / 1_000_000).toFixed(1)} M`;
+  } else if (pipelineValue > 0) {
+    formattedPipeline = `PKR ${pipelineValue.toLocaleString()}`;
+  }
+
+  // Calculate conversion rate roughly (closed / total)
+  const closedLeads = leadsData.filter((l) => l.status === "Closed").length;
+  const conversionRate = totalLeads ? ((closedLeads / totalLeads) * 100).toFixed(1) + "%" : "0%";
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard label="Total Leads" value="1,284" delta={12.4}
+      <StatCard label="Total Leads" value={totalLeads.toString()} delta={12.4}
         trend={[10, 14, 12, 18, 16, 22, 24, 28, 26, 32]}
         icon={Users} accent="primary" />
-      <StatCard label="Active Agents" value="38" delta={4.2}
+      
+      {/* FIX: Using the dynamic activeAgentsCount here */}
+      <StatCard label="Active Agents" value={activeAgentsCount} delta={4.2}
         trend={[20, 22, 21, 24, 25, 27, 26, 28, 30, 32]}
         icon={UserCheck} accent="info" />
-      <StatCard label="Conversion Rate" value="24.8%" delta={-2.1}
+        
+      <StatCard label="Conversion Rate" value={conversionRate} delta={-2.1}
         trend={[30, 28, 32, 27, 26, 28, 24, 26, 25, 24]}
         icon={TrendingUp} accent="warning" />
-      <StatCard label="Revenue Pipeline" value="PKR 1.42 Cr" delta={18.7}
+      <StatCard label="Revenue Pipeline" value={formattedPipeline} delta={18.7}
         trend={[12, 18, 16, 22, 28, 26, 32, 36, 38, 44]}
         icon={Wallet} accent="success" />
     </div>
