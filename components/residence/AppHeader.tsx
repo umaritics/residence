@@ -1,3 +1,5 @@
+"use client";
+
 import { Bell, Search, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -8,8 +10,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { signOut, useSession } from "next-auth/react";
 
 export function AppHeader() {
+  const { data: session } = useSession();
+  
+  // Extract user details from the active session, fallback to defaults
+  const initials = session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "AR";
+  const name = session?.user?.name || "Ali Raza";
+  const role = session?.user?.role || "Agent";
+
   return (
     <header className="h-16 shrink-0 border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-30">
       <div className="h-full px-6 flex items-center gap-4">
@@ -41,12 +51,12 @@ export function AppHeader() {
               <button className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-muted focus:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-transparent hover:border-border/50">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-white text-xs font-semibold">
-                    AR
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left leading-tight">
-                  <p className="text-sm font-semibold">Ali Raza</p>
-                  <p className="text-[11px] text-muted-foreground">Senior Agent</p>
+                  <p className="text-sm font-semibold">{name}</p>
+                  <p className="text-[11px] text-muted-foreground">{role}</p>
                 </div>
                 <ChevronDown className="hidden md:block h-3.5 w-3.5 text-muted-foreground ml-1" />
               </button>
@@ -58,7 +68,15 @@ export function AppHeader() {
               <DropdownMenuItem className="cursor-pointer focus:bg-accent focus:text-accent-foreground transition-colors">Preferences</DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer focus:bg-accent focus:text-accent-foreground transition-colors">Billing</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border h-px" />
-              <DropdownMenuItem className="cursor-pointer text-danger focus:bg-danger/10 focus:text-danger font-medium transition-colors">Sign out</DropdownMenuItem>
+              
+              {/* FIX: Wired up the signOut function */}
+              <DropdownMenuItem 
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="cursor-pointer text-danger focus:bg-danger/10 focus:text-danger font-medium transition-colors"
+              >
+                Sign out
+              </DropdownMenuItem>
+
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
